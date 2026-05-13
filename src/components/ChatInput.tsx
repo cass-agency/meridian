@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useStore } from '../store'
-import { parseIntent } from '../lib/ollama'
-import { chatWithOllama } from '../lib/ollama'
+import { parseIntent, chat as chatWithOllama } from '../lib/venice'
 import { detectTokenFromUrl } from '../lib/tokenDetector'
 import {
   fetchCoinGeckoCoinInfo,
@@ -21,7 +20,6 @@ export default function ChatInput() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const {
-    isOllamaAvailable,
     createDashboard,
     addEntry,
     addToken,
@@ -119,7 +117,7 @@ export default function ChatInput() {
       addChatMessage('user', message)
 
       try {
-        const intent = await parseIntent(message, isOllamaAvailable)
+        const intent = await parseIntent(message)
 
         switch (intent.intent) {
           case 'track_token': {
@@ -167,24 +165,17 @@ export default function ChatInput() {
           }
 
           case 'chat': {
-            if (isOllamaAvailable) {
-              showStatus('Thinking...', 'loading', 0)
-              const recentMsgs = chatMessages.slice(-10).map((m) => ({
-                role: m.role,
-                content: m.content,
-              }))
-              const reply = await chatWithOllama([
-                ...recentMsgs,
-                { role: 'user', content: message },
-              ])
-              addChatMessage('assistant', reply)
-              setStatus(null)
-            } else {
-              addChatMessage(
-                'assistant',
-                'Ollama is not available. Connect Ollama (localhost:11434) for AI chat. I can still detect tokens, create dashboards, and log entries.',
-              )
-            }
+            showStatus('Thinking...', 'loading', 0)
+            const recentMsgs = chatMessages.slice(-10).map((m) => ({
+              role: m.role,
+              content: m.content,
+            }))
+            const reply = await chatWithOllama([
+              ...recentMsgs,
+              { role: 'user', content: message },
+            ])
+            addChatMessage('assistant', reply)
+            setStatus(null)
             break
           }
 
@@ -202,7 +193,6 @@ export default function ChatInput() {
     [
       input,
       isProcessing,
-      isOllamaAvailable,
       activeDashboardId,
       dashboards,
       chatMessages,
@@ -281,20 +271,14 @@ export default function ChatInput() {
 
       {/* Input area */}
       <form onSubmit={handleSubmit} className="flex items-center gap-3 px-4 py-3">
-        <span className="text-xs font-mono shrink-0" style={{ color: '#00FFFF' }}>
-          {isOllamaAvailable ? '⬡' : '○'}
-        </span>
+        <span className="text-xs font-mono shrink-0" style={{ color: '#00FFFF' }}>⬡</span>
         <input
           ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={
-            isOllamaAvailable
-              ? 'Ask Meridian anything...'
-              : 'Paste token URL, "create a dashboard", or log an entry...'
-          }
+          placeholder="Ask Meridian anything..."
           disabled={isProcessing}
           className="flex-1 bg-transparent text-sm font-mono outline-none placeholder-opacity-30"
           style={{
