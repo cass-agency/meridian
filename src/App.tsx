@@ -1,25 +1,12 @@
 import { useEffect, useCallback } from 'react'
 import { useStore } from './store'
-import { checkOllamaAvailable } from './lib/ollama'
 import { fetchTokenData } from './lib/prices'
 import Sidebar from './components/Sidebar'
 import Dashboard from './components/Dashboard'
 import ChatInput from './components/ChatInput'
 
 export default function App() {
-  const { setOllamaAvailable, watchlist, updateTokenPrice, setPriceHistory } = useStore()
-
-  // Check Ollama availability on mount and periodically
-  useEffect(() => {
-    const check = async () => {
-      const available = await checkOllamaAvailable()
-      setOllamaAvailable(available)
-    }
-
-    void check()
-    const interval = setInterval(() => void check(), 30000)
-    return () => clearInterval(interval)
-  }, [setOllamaAvailable])
+  const { watchlist, updateTokenPrice, setPriceHistory } = useStore()
 
   // Refresh token prices on mount and periodically
   const refreshPrices = useCallback(async () => {
